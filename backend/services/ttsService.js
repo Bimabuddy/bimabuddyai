@@ -1,44 +1,93 @@
+const { SarvamAIClient } = require("sarvamai");
+
 class TTSService {
   constructor() {
-    this.elevenLabsKey = process.env.ELEVENLABS_API_KEY;
-    this.azureSpeechKey = process.env.AZURE_SPEECH_KEY;
-    this.azureRegion = process.env.AZURE_SPEECH_REGION;
+    this.sarvamApiKey = process.env.SARVAM_API_KEY;
+    if (!this.sarvamApiKey) {
+      console.warn('Sarvam API key not configured. TTS will not work.');
+    } else {
+      this.client = new SarvamAIClient({
+        apiSubscriptionKey: this.sarvamApiKey
+      });
+    }
+    
+    // Language to Sarvam language code mapping (Only 11 languages supported for TTS)
+    this.languageMap = {
+      'en': 'en-IN',
+      'hi': 'hi-IN',
+      'bn': 'bn-IN',
+      'ta': 'ta-IN',
+      'te': 'te-IN',
+      'gu': 'gu-IN',
+      'kn': 'kn-IN',
+      'ml': 'ml-IN',
+      'mr': 'mr-IN',
+      'pa': 'pa-IN',
+      'od': 'od-IN'
+    };
+    
+    // Speaker selection based on language
+    this.speakerMap = {
+      'en-IN': 'shubh',
+      'hi-IN': 'meera',
+      'bn-IN': 'meera',
+      'ta-IN': 'arjun',
+      'te-IN': 'arjun',
+      'gu-IN': 'shubh',
+      'kn-IN': 'arjun',
+      'ml-IN': 'arjun',
+      'mr-IN': 'meera',
+      'pa-IN': 'shubh',
+      'od-IN': 'arjun'
+    };
   }
 
   async synthesizeSpeech(text, language) {
-    // For demo purposes, return a mock audio response
-    // In production, this would use ElevenLabs, Azure TTS, or similar
+    if (!this.sarvamApiKey) {
+      throw new Error('Sarvam API key not configured');
+    }
     
-    const languageMap = {
-      'en': { voice: 'rachel', language: 'English' },
-      'hi': { voice: 'hindi-female', language: 'Hindi' },
-      'ta': { voice: 'tamil-female', language: 'Tamil' }
-    };
-
-    const voiceConfig = languageMap[language] || languageMap['en'];
+    const targetLanguageCode = this.languageMap[language] || 'en-IN';
+    const speaker = this.speakerMap[targetLanguageCode] || 'shubh';
     
-    // Mock audio buffer (in production, this would be real audio data)
-    console.log(`Synthesizing speech in ${voiceConfig.language}: "${text.substring(0, 50)}..."`);
+    console.log(`Synthesizing speech in ${targetLanguageCode} for: "${text.substring(0, 50)}..."`);
     
-    // Return a mock audio buffer
-    // In production, this would return actual MP3/audio data
-    return Buffer.from('MOCK_AUDIO_DATA');
+    try {
+      const response = await this.client.textToSpeech.convert({
+        text: text,
+        target_language_code: targetLanguageCode,
+        speaker: speaker,
+        pace: 1.0,
+        speech_sample_rate: 22050,
+        enable_preprocessing: true,
+        model: "bulbul:v3-beta",
+        temperature: 0.6
+      });
+      
+      // The response contains base64 audio data
+      if (response.audios && response.audios.length > 0) {
+        // Convert base64 to buffer
+        const audioBase64 = response.audios[0];
+        return Buffer.from(audioBase64, 'base64');
+      } else {
+        throw new Error('No audio data received from Sarvam AI');
+      }
+    } catch (error) {
+      console.error('Sarvam AI TTS Error:', error);
+      throw new Error(`TTS synthesis failed: ${error.message}`);
+    }
   }
 
   async getAvailableVoices(language) {
     const voices = {
       'en': [
-        { id: 'rachel', name: 'Rachel', gender: 'female', accent: 'American' },
-        { id: 'adam', name: 'Adam', gender: 'male', accent: 'American' },
-        { id: 'bella', name: 'Bella', gender: 'female', accent: 'British' }
+        { id: 'shubh', name: 'Shubh', gender: 'male', accent: 'Indian English' }
       ],
       'hi': [
-        { id: 'hindi-female', name: 'Priya', gender: 'female', accent: 'Standard Hindi' },
-        { id: 'hindi-male', name: 'Raj', gender: 'male', accent: 'Standard Hindi' }
+        { id: 'meera', name: 'Meera', gender: 'female', accent: 'Standard Hindi' }
       ],
       'ta': [
-        { id: 'tamil-female', name: 'Lakshmi', gender: 'female', accent: 'Standard Tamil' },
-        { id: 'tamil-male', name: 'Kumar', gender: 'male', accent: 'Standard Tamil' }
+        { id: 'arjun', name: 'Arjun', gender: 'male', accent: 'Standard Tamil' }
       ]
     };
 

@@ -49,9 +49,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/policy', upload.single('policy'), policyRoutes);
-app.use('/api/translation', translationRoutes);
-app.use('/api/tts', ttsRoutes);
+app.use('/api', upload.single('policy'), policyRoutes);
+app.use('/api', translationRoutes);
+app.use('/api', ttsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

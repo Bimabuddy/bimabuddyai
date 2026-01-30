@@ -1,8 +1,13 @@
+export interface KeyFeature {
+  label: string;
+  value: string;
+  category: 'financial' | 'coverage' | 'limitation' | 'exclusion' | 'other';
+}
+
 export interface PolicySummary {
-  sumInsured: string;
-  roomRentLimit: string;
-  waitingPeriod: string;
-  coPay: string;
+  title: string;
+  overview: string;
+  keyFeatures: KeyFeature[];
   keyExclusions: string[];
 }
 
@@ -24,6 +29,7 @@ export interface Language {
   code: string;
   name: string;
   flag: string;
+  supportsTTS?: boolean;
 }
 
 export interface QAResponse {

@@ -6,10 +6,30 @@ import QAInterface from './components/QAInterface';
 import { PolicyAnalysis, Language } from './types';
 import { analyzePolicy } from './services/api';
 
-const languages: Language[] = [
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'hi', name: 'हिंदी', flag: '🇮🇳' },
-  { code: 'ta', name: 'தமிழ்', flag: '🇱🇰' },
+const languages: (Language & { supportsTTS?: boolean })[] = [
+  { code: 'en', name: 'English', flag: '🇬🇧', supportsTTS: true },
+  { code: 'hi', name: 'Hindi', flag: '🇮🇳', supportsTTS: true },
+  { code: 'bn', name: 'Bengali', flag: '🇮🇳', supportsTTS: true },
+  { code: 'ta', name: 'Tamil', flag: '🇮🇳', supportsTTS: true },
+  { code: 'te', name: 'Telugu', flag: '🇮🇳', supportsTTS: true },
+  { code: 'mr', name: 'Marathi', flag: '🇮🇳', supportsTTS: true },
+  { code: 'gu', name: 'Gujarati', flag: '🇮🇳', supportsTTS: true },
+  { code: 'kn', name: 'Kannada', flag: '🇮🇳', supportsTTS: true },
+  { code: 'ml', name: 'Malayalam', flag: '🇮🇳', supportsTTS: true },
+  { code: 'pa', name: 'Punjabi', flag: '🇮🇳', supportsTTS: true },
+  { code: 'od', name: 'Odia', flag: '🇮🇳', supportsTTS: true },
+  { code: 'as', name: 'Assamese', flag: '🇮🇳' },
+  { code: 'ur', name: 'Urdu', flag: '🇮🇳' },
+  { code: 'sa', name: 'Sanskrit', flag: '🇮🇳' },
+  { code: 'ks', name: 'Kashmiri', flag: '🇮🇳' },
+  { code: 'ne', name: 'Nepali', flag: '🇳🇵' },
+  { code: 'kok', name: 'Konkani', flag: '🇮🇳' },
+  { code: 'sd', name: 'Sindhi', flag: '🇮🇳' },
+  { code: 'mni', name: 'Manipuri', flag: '🇮🇳' },
+  { code: 'doi', name: 'Dogri', flag: '🇮🇳' },
+  { code: 'brx', name: 'Bodo', flag: '🇮🇳' },
+  { code: 'mai', name: 'Maithili', flag: '🇮🇳' },
+  { code: 'sat', name: 'Santali', flag: '🇮🇳' }
 ];
 
 function App() {
@@ -42,7 +62,7 @@ function App() {
 
         {/* Language Selector */}
         <div className="flex justify-center mb-6">
-          <div className="bg-white rounded-lg shadow-md p-2 flex gap-2">
+          <div className="bg-white rounded-lg shadow-md p-2 flex flex-wrap justify-center gap-2">
             {languages.map((lang) => (
               <button
                 key={lang.code}
@@ -93,10 +113,14 @@ function App() {
         ) : (
           <div className="space-y-6">
             {/* Policy Summary */}
-            <PolicySummary analysis={policyAnalysis} />
+            <PolicySummary 
+              analysis={policyAnalysis} 
+              language={selectedLanguage.code} 
+              supportsTTS={!!selectedLanguage.supportsTTS}
+            />
 
             {/* QA Interface */}
-            <QAInterface analysis={policyAnalysis} />
+            <QAInterface analysis={policyAnalysis} language={selectedLanguage.code} />
 
             {/* Reset Button */}
             <div className="text-center">

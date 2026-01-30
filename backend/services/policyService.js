@@ -1,12 +1,15 @@
 const pdf = require('pdf-parse');
 const fs = require('fs');
 const path = require('path');
+const Groq = require('groq-sdk');
 
 class PolicyService {
   constructor() {
-    this.openaiApiKey = process.env.OPENAI_API_KEY;
-    if (!this.openaiApiKey) {
-      console.warn('OpenAI API key not configured. Using mock responses.');
+    this.groqApiKey = process.env.GROQ_API_KEY;
+    if (!this.groqApiKey) {
+      console.warn('Groq API key not configured. Using mock responses.');
+    } else {
+      this.groq = new Groq({ apiKey: this.groqApiKey });
     }
   }
 
@@ -17,11 +20,11 @@ class PolicyService {
       // Extract text from PDF
       const pdfText = await this.extractPDFText(file.path);
       
-      if (!this.openaiApiKey) {
+      if (!this.groqApiKey) {
         return this.getMockAnalysis(pdfText);
       }
       
-      // Use OpenAI for analysis (mock implementation for now)
+      // Use Groq for analysis
       const analysis = await this.analyzeWithAI(pdfText);
       
       // Clean up uploaded file
@@ -49,23 +52,104 @@ class PolicyService {
   }
 
   async analyzeWithAI(policyText) {
-    // For now, return mock analysis. In production, this would call OpenAI API
-    return this.getMockAnalysis(policyText);
+    try {
+      const prompt = `You are an expert insurance policy analyst helping ordinary people understand their insurance. Analyze this policy document and explain it in the simplest possible way, removing ALL jargon.
+
+Policy Document:
+${policyText.substring(0, 15000)} 
+
+Provide a JSON response with this structure:
+{
+  "summary": {
+    "title": "Brief policy name (e.g., 'Health Insurance Plan')",
+    "overview": "2-3 sentence explanation for a layman about what this policy does",
+    "keyFeatures": [
+      {
+        "label": "Simple feature name",
+        "value": "Plain language explanation with amounts",
+        "category": "financial|coverage|limitation|exclusion|other"
+      }
+    ],
+    "keyExclusions": ["What's NOT covered, in simple terms"]
+  },
+  "simplifiedClauses": [
+    {
+      "originalText": "exact clause from policy",
+      "simplifiedText": "plain language version removing jargon",
+      "analogy": "relatable everyday analogy",
+      "pageNumber": estimated_page,
+      "clauseNumber": "clause_ref"
+    }
+  ]
+}
+
+IMPORTANT INSTRUCTIONS:
+1. For keyFeatures, identify the 6-8 MOST IMPORTANT things a normal person should know (amounts, limits, coverage, waiting periods, etc.)
+2. Remove ALL insurance jargon - explain like you're talking to a friend
+3. Use actual amounts with currency symbols (₹)
+4. Categories: financial (money amounts), coverage (what's covered), limitation (restrictions), exclusion (what's not covered), other
+5. For simplifiedClauses, focus on the clauses that could surprise or confuse the customer
+6. keyExclusions should be simple bullets of what's NOT covered
+
+Examples of good keyFeatures:
+- {"label": "Coverage Amount", "value": "Up to ₹5 lakh for medical expenses", "category": "financial"}
+- {"label": "Waiting Period", "value": "Must wait 30 days before first claim (except accidents)", "category": "limitation"}
+- {"label": "Room Charges", "value": "Hospital room up to ₹2,000 per day", "category": "coverage"}`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.3,
+        max_tokens: 4000,
+      });
+
+      const responseText = completion.choices[0]?.message?.content || '';
+      
+      // Try to parse JSON from response
+      let analysisData;
+      try {
+        // Extract JSON if wrapped in markdown code blocks
+        const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, responseText];
+        analysisData = JSON.parse(jsonMatch[1] || responseText);
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        return this.getMockAnalysis(policyText);
+      }
+
+      return {
+        ...analysisData,
+        fullText: policyText
+      };
+    } catch (error) {
+      console.error('Groq API Error:', error);
+      return this.getMockAnalysis(policyText);
+    }
   }
 
   getMockAnalysis(policyText) {
     return {
       summary: {
-        sumInsured: '₹5,00,000',
-        roomRentLimit: '₹2,000 per day',
-        waitingPeriod: '30 days for new illnesses, 48 months for pre-existing diseases',
-        coPay: '10% for senior citizens (60+ years)',
+        title: 'Health Insurance Policy',
+        overview: 'This is a health insurance plan that covers your medical expenses up to ₹5 lakh. It helps pay for hospital stays, treatments, and medical bills when you get sick or injured.',
+        keyFeatures: [
+          { label: 'Coverage Amount', value: 'Up to ₹5,00,000 for medical expenses', category: 'financial' },
+          { label: 'Room Charges', value: 'Hospital room rental up to ₹2,000 per day', category: 'coverage' },
+          { label: 'Waiting Period', value: 'Wait 30 days for illnesses, 4 years for pre-existing conditions', category: 'limitation' },
+          { label: 'Co-payment', value: 'You pay 10% if you are 60+ years old', category: 'limitation' },
+          { label: 'Claim Process', value: 'Submit bills within 15 days of discharge', category: 'other' },
+          { label: 'Ambulance', value: 'Emergency ambulance costs up to ₹2,000', category: 'coverage' }
+        ],
         keyExclusions: [
-          'Pre-existing diseases for first 48 months',
+          'Pre-existing diseases for first 4 years',
           'Cosmetic treatments and plastic surgery',
-          'Dental treatment unless due to accident',
-          'Non-allopathic treatments',
-          'Self-inflicted injuries or suicide attempts'
+          'Dental treatment (unless accident-related)',
+          'Alternative medicine treatments',
+          'Self-inflicted injuries'
         ]
       },
       simplifiedClauses: [
@@ -96,16 +180,53 @@ class PolicyService {
   }
 
   async answerQuestion(question, policyText) {
-    if (!this.openaiApiKey) {
+    if (!this.groqApiKey) {
       return this.getMockAnswer(question);
     }
 
     try {
-      // In production, this would use OpenAI API with RAG
-      return this.getMockAnswer(question);
+      const prompt = `You are an insurance policy expert. Answer the following question based ONLY on the provided policy document. If the answer is not in the policy, say so clearly.
+
+Policy Document:
+${policyText.substring(0, 12000)}
+
+Question: ${question}
+
+Provide your answer in JSON format:
+{
+  "answer": "detailed answer in simple language",
+  "source": {
+    "page": estimated_page_number,
+    "paragraph": estimated_paragraph,
+    "clause": "clause_reference_if_any"
+  },
+  "confidence": 0.0_to_1.0
+}`;
+
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.2,
+        max_tokens: 1000,
+      });
+
+      const responseText = completion.choices[0]?.message?.content || '';
+      
+      try {
+        const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, responseText];
+        return JSON.parse(jsonMatch[1] || responseText);
+      } catch (parseError) {
+        console.error('Failed to parse answer:', parseError);
+        return this.getMockAnswer(question);
+      }
     } catch (error) {
       console.error('Q&A error:', error);
-      throw new Error('Failed to process question');
+      return this.getMockAnswer(question);
     }
   }
 
