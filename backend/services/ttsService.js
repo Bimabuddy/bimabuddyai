@@ -26,19 +26,19 @@ class TTSService {
       'od': 'od-IN'
     };
     
-    // Speaker selection based on language
+    // Speaker selection based on language (using names from recognized speaker list)
     this.speakerMap = {
       'en-IN': 'shubh',
-      'hi-IN': 'meera',
-      'bn-IN': 'meera',
-      'ta-IN': 'arjun',
-      'te-IN': 'arjun',
+      'hi-IN': 'ritu',
+      'bn-IN': 'manisha',
+      'ta-IN': 'aditya',
+      'te-IN': 'aditya',
       'gu-IN': 'shubh',
-      'kn-IN': 'arjun',
-      'ml-IN': 'arjun',
-      'mr-IN': 'meera',
+      'kn-IN': 'aditya',
+      'ml-IN': 'aditya',
+      'mr-IN': 'ritu',
       'pa-IN': 'shubh',
-      'od-IN': 'arjun'
+      'od-IN': 'aditya'
     };
   }
 
@@ -84,10 +84,10 @@ class TTSService {
         { id: 'shubh', name: 'Shubh', gender: 'male', accent: 'Indian English' }
       ],
       'hi': [
-        { id: 'meera', name: 'Meera', gender: 'female', accent: 'Standard Hindi' }
+        { id: 'ritu', name: 'Ritu', gender: 'female', accent: 'Standard Hindi' }
       ],
       'ta': [
-        { id: 'arjun', name: 'Arjun', gender: 'male', accent: 'Standard Tamil' }
+        { id: 'aditya', name: 'Aditya', gender: 'male', accent: 'Standard Tamil' }
       ]
     };
 
