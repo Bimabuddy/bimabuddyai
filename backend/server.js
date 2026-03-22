@@ -9,11 +9,13 @@ const policyRoutes = require('./routes/policy');
 const translationRoutes = require('./routes/translation');
 const ttsRoutes = require('./routes/tts');
 
+const os = require('os');
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
+// Ensure uploads directory exists (using /tmp for serverless environments)
+const uploadsDir = path.join(os.tmpdir(), 'insurance-narrator-uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
