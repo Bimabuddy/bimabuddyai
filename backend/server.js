@@ -51,14 +51,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api', upload.single('policy'), policyRoutes);
-app.use('/api', translationRoutes);
-app.use('/api', ttsRoutes);
+const apiRouter = express.Router();
+apiRouter.use(policyRoutes);
+apiRouter.use(translationRoutes);
+apiRouter.use(ttsRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+apiRouter.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+// Apply routes to both /api and / for flexibility
+app.use('/api', upload.single('policy'), apiRouter);
+app.use('/', upload.single('policy'), apiRouter);
 
 // Error handling middleware
 app.use((error, req, res, next) => {
